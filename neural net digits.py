@@ -1,6 +1,5 @@
 import sys
-import gzip
-import csv
+import numpy
 
 SIZE = 28 #number of pixels for input
 
@@ -24,33 +23,11 @@ def main():
 	#test #the test set
 	#predict #Predicted labels for the test set
 
-	"""
-	test = gzip.open('TestDigitX.csv.gz', 'rb')
-	with open(test,'r') as csvFile:
-		file = csv.reader(csvFile)
 
-		for line in file:
-			print(line)
-	
-	"""
 
 	myList = [[0 for i in range(SIZE)] for j in range(SIZE)] 
-	i = 0
-	j = 0
-
-	with gzip.open('TestDigitX.csv.gz', 'rb') as f:
-		for line in f:
-			actualLine = line.decode('cp855').split(',')
-			for number in actualLine:
-				myList[i].append(float(number))
-				j+= 1
-				if j == 27 and i < 27:
-					i += 1
-					j = 0
-
-			
-
-	print(myList[0][0])
+	x = numpy.loadtxt('TestDigitX.csv.gz', dtype=float, delimiter=',')
+	print(type(x))
 
 
 	testNet = myNeuralNet(nInput, nHidden, nOutput)
