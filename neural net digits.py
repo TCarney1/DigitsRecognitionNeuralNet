@@ -10,6 +10,7 @@ HIDDEN_LAYERS = 1
 
 MEAN = 0
 VARIANCE = 1
+np.random.seed(0)
 
 
 class NeuralNet:
@@ -17,33 +18,30 @@ class NeuralNet:
 		#randomly init weights for every neuron
 		self.weights = [np.random.randn(y, x) for x, y in zip(sizes[:-1], sizes[1:])]
 		#randomly init the bias for each neuron
-		self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
-		self.sizes = sizes
+		self.biases = [np.random.randn(y,) for y in sizes[1:]]
 
-	# calculates the activations for 1 number
+	# returns the cost and activations of a single number through the NN
 	def forward(self, numInformation, answer):
 		for bias, weight in zip(self.biases, self.weights):
-				numInformation = self.sigmoid(np.dot(weight, numInformation) + bias)
+			numInformation = self.sigmoid(np.dot(numInformation, weight.T) + bias)
 		return (self.cost(numInformation, answer), numInformation)
 
 
+	def backward(self, x, y):
+		pass
+
+
+	def cost_derivative(self, output_activations, y):
+		return (output_activations-y)
+		
+
+	def sigmoid_prime(self, z):
+		return self.sigmoid(z)*(1-self.sigmoid(z))
+
+        
 	def sigmoid(self, x):
 		return 1.0/(1.0+np.exp(-x))
 
-
-	"""
-	#prints the NN's guess, and the answer.
-	def answer(self):
-		#for each numbers output in the training set
-		for num, index in zip(self.output, self.trainingAnswers):
-			m = 0
-			#for each output in that specific num's output.
-			for i in range(len(num)):
-				if num[i] > num[m]:
-					m = i
-			print("Guess: ", m, end=' ')
-			print("Actual: ", index)
-	"""
 
 	#Returns the cost for one number (10 activations)
 	def cost(self, activations, answer):
@@ -56,7 +54,7 @@ class NeuralNet:
 		return cost
 
 
-
+	#runs forwards and backwards for n number of epochs. This is done it batches.
 	def trainNet(self, data, answers):
 		batchCounter = 0
 		numBatches = round(len(data)/BATCHSIZE)
@@ -71,21 +69,32 @@ class NeuralNet:
 				currentAnswers = answers[batchCounter:batchEnd]
 
 				for (x, y) in zip(currentBatch, answers):
-					temp = np.squeeze(x).shape
+					#pass the information of 1 input through the NN
 					cost, activations = self.forward(x, y)
-					print(cost)
-					#gradW_x = self.backwards(self.train)
-					#sumGrad = sumGrad + gradW_x
+					gradW_x = self.backward(x, y)
+					sumGrad = sumGrad + gradW_x
 
 				batchCounter += BATCHSIZE
 
-			#gradw_batch = sumGrad / BATCHESIZE
+			gradw_batch = sumGrad / BATCHESIZE
 
-			#w = w - learningRate * gradw_batch
+			w = w - learningRate * gradw_batch
 		
 
 	def test(self, data, answers):
-		pass
+		totalright = 0
+		for (x, y) in data, answers:
+			cost, activations = forward(x, y)
+			maxIndex = 0
+			for i in range(len(activations)):
+				if activations[i] > activations[maxIndex]:
+					maxIndex = i
+			print("Guess: ", maxIndex, "Answer: ", y)
+			if maxIndex == y:
+				totalright += 1
+		print(totalright, "/", len(answers), "\nAccuracy: ", totalright/len(answers)*100)
+
+
 
 
 
@@ -115,6 +124,8 @@ def main():
 	myNet = NeuralNet(sizes)
 
 	myNet.trainNet(train1, trainAns)
+	myNet.test(test1, testAns)
+
 
 
 
