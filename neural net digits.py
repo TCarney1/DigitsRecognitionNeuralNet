@@ -1,171 +1,233 @@
 import sys
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 
-EPOCHS = 30
-BATCH_SIZE = 20
-LEARNING_RATE = 2
-HIDDEN_LAYERS = 1
+
+
 
 np.random.seed(0)
 
 
 class NeuralNet:
-	def __init__(self, sizes):
-		#randomly init weights for every neuron
+	def __init__(self, sizes, learningRate, batchSize, epochs):
+		#randomly init weights for every neuron (Sizes is used to inti the right shape.)
 		self.weights = [np.random.randn(y, x) for x, y in zip(sizes[:-1], sizes[1:])]
-		#randomly init the bias for each neuron
+		#randomly init the bias for each neuron (Sizes is used to inti the right shape.)
 		self.biases = [np.random.randn(y,) for y in sizes[1:]]
 		self.sizes = sizes
+		self.learningRate = learningRate
+		self.batchSize = batchSize
+		self.epochs = epochs
 
-	# returns the cost and activations of a single number through the NN
-	def forward(self, numInformation, answer):
+
+	# returns the prediction from 1 forward pass through the NN
+	def forward(self, nodeValues):
 		for bias, weight in zip(self.biases, self.weights):
-			numInformation = self.sigmoid(np.dot(weight, numInformation) + bias)
-		return (self.cost(numInformation, answer), numInformation)
+			nodeValues = self.sigmoid(np.dot(weight, nodeValues) + bias)
 
-	def backward(self, x, y):
+		maxIndex = 0
+		for i in range(len(nodeValues)):
+			if nodeValues[i] > nodeValues[maxIndex]:
+				maxIndex = i
 
-		newBiases = [np.zeros(b.shape) for b in self.biases]
-		newWeights = [np.zeros(w.shape) for w in self.weights]
+		return maxIndex
 
-		activation = x
-		### or x
-		activations = [x] 
-		zs = [] 
+
+	#Backwards propagation
+	def backward(self, inputValues, answer):
+
+		# init a lisdirt of np arrays that is the same shape as self.weights and self.biases
+		# this will be used to store the slight changes we want to make for the current
+		# number.
+		changeInBiases = [np.zeros(b.shape) for b in self.biases]
+		changeInWeights = [np.zeros(w.shape) for w in self.weights]
+
+		# layerValues will store the values at each layer. 
+		layerValues = [inputValues] 
+
+
+		### This is a standard forward pass ###
+		### but we are storing the values on the way through ###
+		currentLayerValues = inputValues
 		for bias, weight in zip(self.biases, self.weights):
-			######## this z
-			z = self.sigmoid(np.dot(weight, activation)+bias)
-			zs.append(z)
-			activation = z
-			activations.append(activation)
+			# find the output of each Neuron
+			output = self.sigmoid(np.dot(weight, currentLayerValues)+bias)
+			currentLayerValues = output
+			# store the outputs at each layer
+			layerValues.append(currentLayerValues)
 
+		### End of forward pass ###
 
-		# how far off we where * derivative of sigmoid of the last
-		delta = self.cost(activations[-1], y) * self.sigmoidPrime(zs[-1])
+		# find how far off the last layer is and how much we wanna change it
+		correction = self.cost(layerValues[-1], answer) * self.sigmoidPrime(layerValues[-1])
 
-		newBiases[-1] = delta
-		newWeights[-1] = np.dot(delta[:,None], activations[-2][None,:])
+		# apply the corrections to the last layer's biases and weights
+		changeInBiases[-1] = correction
+		changeInWeights[-1] = np.dot(correction[:,None], layerValues[-2][None,:])
 
-
-		
-		
+		# apply the corrections to the rest of the NN. (loops backwards)
 		for layer in range(2, len(self.sizes)):
-			z = zs[-layer]
-			sp = self.sigmoidPrime(z)
-			delta = np.dot(self.weights[-layer+1].transpose(), delta) * sp
-			newBiases[-layer] = delta
-			newWeights[-layer] = np.dot(delta[:,None], activations[-layer-1][None,:])
+			correction = np.dot(self.weights[-layer+1].transpose(), correction) * self.sigmoidPrime(layerValues[-layer])
+			changeInBiases[-layer] = correction
+			changeInWeights[-layer] = np.dot(correction[:,None], layerValues[-layer-1][None,:])
 		
 
-		return (newBiases, newWeights)
+		return (changeInBiases, changeInWeights)
 
 	
 
+	# This the x's here dont have to be 'sigmoided' as the x that is passed in 
+	# will already be 'sigmoided'.
 	def sigmoidPrime(self, x):
-		return x * (1 - x)
-        
+		return x * (1.0 - x)
+
+       
+    # standard sigmoid function
 	def sigmoid(self, x):
 		return 1.0/(1.0+np.exp(-x))
 
-	def cost(self, activations, answer):
-		cost = []
-		for i in range(len(activations)):
-			if i == answer:
-				cost.append(activations[i] - 1)
-			else:
-				cost.append(activations[i] - 0)
-		return cost
-
-	"""
 	#Returns list of costs for one number (10 activations)
 	def cost(self, activations, answer):
-		
-		cost = []
-		for i in range(len(activations)):
-			if i == answer:
-				cost.append((activations[i] - 1)**2)
-			else:
-				cost.append((activations[i] - 0)**2)
-		print("Answer: ", answer)	
-		for i, j in zip(activations, cost):
-			
-			print("Activations: ", i, "Cost: ", j)
+		cost = [ j - i for i, j in zip(answer, activations)]
 		return cost
-	"""
-
-	#runs forwards and backwards for n number of epochs. This is done it batches.
-	def trainNet(self, data):
-
-		nBatches = len(data)/BATCH_SIZE
-		batches = [data[i:i+BATCH_SIZE] for i in range(0, len(data), BATCH_SIZE)]
-		
-		for epoch in range(EPOCHS):
-			random.shuffle(data)
-			for batch in batches:
-
-				totalBiasChange = np.array([np.zeros(b.shape) for b in self.biases])
-				totalWeightChange = np.array([np.zeros(w.shape) for w in self.weights])
-
-				for (x, y) in batch:
-					deltaBias, deltaWeight = self.backward(x, y)
-
-					totalBiasChange = [b + db for b, db in zip(totalBiasChange, deltaBias)]
-					totalWeightChange = [w + dw for w, dw in zip(totalWeightChange, deltaWeight)]
-
-				self.weights = [w-(LEARNING_RATE/BATCH_SIZE)*dw for w, dw in zip(self.weights, totalWeightChange)]
-				self.biases = [b-(LEARNING_RATE/BATCH_SIZE)*db for b, db in zip(self.biases, totalBiasChange)]
 
 	
 
-
+	#runs forwards and backwards for n number of epochs. This is done it batches.
+	def trainNet(self, data):
+		#Breaking up training data into batches of side self.batchSize
+		batches = [data[i:i+self.batchSize] for i in range(0, len(data), self.batchSize)]
+		accuracy = []
 		
-	def test(self, data, answers):
+		for epoch in range(self.epochs):
+			random.shuffle(data)
+			for batch in batches:
+
+				# copy the shape of bias and weight  as we will store the change in 
+				# bias and weight here. This will make it easy to add the change in
+				# bias and weight down the road.
+				totalBiasChange = np.array([np.zeros(b.shape) for b in self.biases])
+				totalWeightChange = np.array([np.zeros(w.shape) for w in self.weights])
+
+				#Individualy pass each number in the data set through the backward propergation.
+				# x is a input data. y is answer.
+				for (x, y) in batch:
+
+					# we move forwards through the layers inside of backwards.
+					# This way we can store values throughout the pass forwards.
+					deltaBias, deltaWeight = self.backward(x, y)
+
+					# add the change in biases and weights for that one number, to the total changes.
+					totalBiasChange = [b + db for b, db in zip(totalBiasChange, deltaBias)]
+					totalWeightChange = [w + dw for w, dw in zip(totalWeightChange, deltaWeight)]
+
+				# update the weights and biases slightly. (Gradient decent)
+				self.weights = [w-(self.learningRate/self.batchSize)*dw for w, dw in zip(self.weights, totalWeightChange)]
+				self.biases = [b-(self.learningRate/self.batchSize)*db for b, db in zip(self.biases, totalBiasChange)]
+			accuracy.append(self.test(data))
+
+		return accuracy
+
+	
+	# Performs 1 forward pass on NN with test data. Prints: "Correct guesses/Total guesses, Accuracy: %"
+	def test(self, data):
 		totalright = 0
-		for (x, y) in zip(data, answers):
-			cost, activations = self.forward(x, y)
-			maxIndex = 0
-			for i in range(len(activations)):
-				if activations[i] > activations[maxIndex]:
-					maxIndex = i
-			print("Guess: ", maxIndex, "Answer: ", y)
-			if maxIndex == y:
+		for (x, y) in data:
+			prediction = self.forward(x)
+			if y[prediction] == 1:
 				totalright += 1
-		print(totalright, "/", len(answers), "\nAccuracy(%): ", totalright/len(answers)*100)
+		return totalright/len(data)*100
+
+
+	def output(self, data, outFile):
+		predictions = [self.forward(d) for d in data]
+		np.savetxt(outFile, predictions, delimiter=', ')
+
 
 
 
 def main():
-	nInput = int(sys.argv[1]) #number of neurons in the input layer
-	nHidden = int(sys.argv[2])#number of neurons in the hidden layer
-	nOutput = int(sys.argv[3]) #number of neurons in the output layer 
-	#test #the test set
-	#predict #Predicted labels for the test set
+	nInput = int(sys.argv[1]) # Number of neurons in the input layer
+	nHidden = int(sys.argv[2]) # Number of neurons in the hidden layer
+	nOutput = int(sys.argv[3]) # Number of neurons in the output layer 
+	trainFile = sys.argv[4] # Name of the file with the training data
+	trainLabel = sys.argv[5] # Name of the file with the answers to the training data
+	testFile = sys.argv[6] # Name of the file with the test data
+	predictionFile = sys.argv[7] # output file for the predictions.
 
+
+	# Structure of NN. Index's are layers, values are nNodes in a layer.
 	sizes = [nInput, nHidden, nOutput]
 
-	#training set
-	train1 = np.loadtxt('TrainDigitX.csv.gz', dtype=float, delimiter=',') 
-	#labels associated with the training set
-	trainAns = np.loadtxt('TrainDigitY.csv.gz', dtype=float)
-
-	test1 = np.loadtxt('TestDigitX.csv.gz', dtype=float, delimiter=',')
+	# Load training information and answers
+	trainingData = np.loadtxt(trainFile, dtype=float, delimiter=',') 
+	trainingAnswers = np.loadtxt(trainLabel, dtype=float)
+	trainingAnswers = formatAnswers(trainingAnswers)
+	# Load testing information and answers
+	testData = np.loadtxt(testFile, dtype=float, delimiter=',')
 	testAns = np.loadtxt('TestDigitY.csv.gz', dtype=float)
+	testAns = formatAnswers(testAns)
+
+	# Form information and answers into training and testing sets.
+	testingSet = [(i, j) for i, j in zip(testData, testAns)]
+	trainingSet = [(i, j) for i, j in zip(trainingData, trainingAnswers)]
+
+	#  Args: sizes, learningRate, batchSize, epochs
+	NN1 = NeuralNet(sizes, 10, 10, 50)
+	#NN2 = NeuralNet(sizes, 1, 10, 50)
+	#NN3 = NeuralNet(sizes, 3, 20, 50)
+	#NN4 = NeuralNet(sizes, 10, 50, 50)
+	#NN5 = NeuralNet(sizes, 1, 50, 50)
+
+	print(NN1.test(testingSet))
 
 
-	testData = [(i, j) for i, j in zip(test1, testAns)]
-	trainData = [(i, j) for i, j in zip(train1, trainAns)]
+	#allAcc = []
+	# trains NN with back propergation
+	#allAcc.append(NN1.trainNet(trainingSet))
+	#allAcc.append(NN2.trainNet(trainingSet))
+	#allAcc.append(NN3.trainNet(trainingSet))
+	#allAcc.append(NN4.trainNet(trainingSet))
+	#allAcc.append(NN5.trainNet(trainingSet))
+
+	#displayAccuracy(allAcc)
 
 
+	#myNet.output(testData, predictionFile)
 
-	#init first hidden layer with size of input (28*28), and number of neurons specified in arguments.
-	myNet = NeuralNet(sizes)
+def displayAccuracy(accuracy):
+	e = np.arange(0, 50, 1)
 
-	myNet.trainNet(trainData)
-	myNet.test(test1, testAns)
+	fig, ax = plt.subplots()
+
+	
+	ax.plot(e, accuracy[0], label='High LR Low BS' )
+	ax.plot(e, accuracy[1], label='Low LR Low BS' )
+	ax.plot(e, accuracy[2], label='Medium Everything')
+	ax.plot(e, accuracy[3], label='High LR High BS' )
+	ax.plot(e, accuracy[4], label='Low LR High BS' )
+
+	ax.set(xlabel="Epoch (n)", ylabel="Accuracy (%)", title="Various Settings")
+	plt.legend()
+	ax.grid()
+	fig.savefig("OverAll.png")
+	plt.show()
 
 
+def formatAnswers(trainingAnswers):
+	fAnswers = []
+
+	for a in trainingAnswers:
+		answer = []
+		for i in range(10):
+			if i == a:
+				answer.append(1)
+			else:
+				answer.append(0)
+		fAnswers.append(answer)
+	return fAnswers
 
 
 if __name__ == "__main__":
