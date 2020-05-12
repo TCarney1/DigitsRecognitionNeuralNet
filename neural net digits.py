@@ -176,21 +176,21 @@ def main():
 
 	#  Args: sizes, learningRate, batchSize, epochs
 	NN1 = NeuralNet(sizes, 10, 10, 50)
-	#NN2 = NeuralNet(sizes, 1, 10, 50)
-	#NN3 = NeuralNet(sizes, 3, 20, 50)
-	#NN4 = NeuralNet(sizes, 10, 50, 50)
-	#NN5 = NeuralNet(sizes, 1, 50, 50)
+	NN2 = NeuralNet(sizes, 1, 10, 50)
+	NN3 = NeuralNet(sizes, 3, 20, 50)
+	NN4 = NeuralNet(sizes, 10, 50, 50)
+	NN5 = NeuralNet(sizes, 1, 50, 50)
 
 	print(NN1.test(testingSet))
 
 
-	#allAcc = []
+	allAcc = []
 	# trains NN with back propergation
-	#allAcc.append(NN1.trainNet(trainingSet))
-	#allAcc.append(NN2.trainNet(trainingSet))
-	#allAcc.append(NN3.trainNet(trainingSet))
-	#allAcc.append(NN4.trainNet(trainingSet))
-	#allAcc.append(NN5.trainNet(trainingSet))
+	allAcc.append(NN1.trainNet(trainingSet))
+	allAcc.append(NN2.trainNet(trainingSet))
+	allAcc.append(NN3.trainNet(trainingSet))
+	allAcc.append(NN4.trainNet(trainingSet))
+	allAcc.append(NN5.trainNet(trainingSet))
 
 	#displayAccuracy(allAcc)
 
