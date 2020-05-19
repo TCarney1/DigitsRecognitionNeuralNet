@@ -175,7 +175,7 @@ def main():
 	trainingSet = [(i, j) for i, j in zip(trainingData, trainingAnswers)]
 
 	#  Args: sizes, learningRate, batchSize, epochs
-	NN1 = NeuralNet(sizes, 10, 10, 50)
+	NN1 = NeuralNet(sizes, 3, 20, 50)
 	NN2 = NeuralNet(sizes, 1, 10, 50)
 	NN3 = NeuralNet(sizes, 3, 20, 50)
 	NN4 = NeuralNet(sizes, 10, 50, 50)
@@ -185,6 +185,7 @@ def main():
 
 
 	allAcc = []
+	
 	# trains NN with back propergation
 	allAcc.append(NN1.trainNet(trainingSet))
 	allAcc.append(NN2.trainNet(trainingSet))
@@ -192,7 +193,7 @@ def main():
 	allAcc.append(NN4.trainNet(trainingSet))
 	allAcc.append(NN5.trainNet(trainingSet))
 
-	#displayAccuracy(allAcc)
+	displayAccuracy(allAcc)
 
 
 	#myNet.output(testData, predictionFile)
@@ -202,17 +203,17 @@ def displayAccuracy(accuracy):
 
 	fig, ax = plt.subplots()
 
-	
+	ax.plot(e, accuracy[0], label='High LR low BS' )
 	ax.plot(e, accuracy[0], label='High LR Low BS' )
 	ax.plot(e, accuracy[1], label='Low LR Low BS' )
 	ax.plot(e, accuracy[2], label='Medium Everything')
 	ax.plot(e, accuracy[3], label='High LR High BS' )
 	ax.plot(e, accuracy[4], label='Low LR High BS' )
 
-	ax.set(xlabel="Epoch (n)", ylabel="Accuracy (%)", title="Various Settings")
+	ax.set(xlabel="Epoch (n)", ylabel="Accuracy (%)", title="Various")
 	plt.legend()
 	ax.grid()
-	fig.savefig("OverAll.png")
+	fig.savefig("Various.png")
 	plt.show()
 
 
